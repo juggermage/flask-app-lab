@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Шапка з фото -->
+<section class="hero row align-items-center g-4 mb-5" aria-labelledby="hero-title">
+    <div class="col-md-4 text-center">
+        <img src="{{ url_for('static', filename='images/photo.png') }}"
+             alt="Фото: {{ profile.name }}" class="profile-photo img-fluid rounded-circle">
+    </div>
+    <div class="col-md-8">
+        <h1 id="hero-title" class="display-5 fw-bold">{{ profile.name }}</h1>
+        <p class="lead text-accent">{{ profile.role }}</p>
+        <a href="{{ url_for('contacts') }}" class="btn btn-accent">Зв'язатися зі мною</a>
+    </div>
+</section>
+
+<section id="about" class="resume-section" aria-labelledby="about-title">
+    <h2 id="about-title">Про себе</h2>
+    <p>{{ profile.about }}</p>
+</section>
+
+<section id="education" class="resume-section" aria-labelledby="education-title">
+    <h2 id="education-title">Освіта</h2>
+    {% for item in education %}
+        <article class="timeline-item">
+            <h3 class="h5 mb-1">{{ item.place }}</h3>
+            <p class="mb-1">{{ item.degree }}</p>
+            <time class="text-muted small">{{ item.years }}</time>
+        </article>
+    {% endfor %}
+</section>
+
+<section id="skills" class="resume-section" aria-labelledby="skills-title">
+    <h2 id="skills-title">Навички</h2>
+    <ul class="list-unstyled row row-cols-1 row-cols-sm-2 g-2">
+        {% for skill in skills %}
+            <li class="col"><span class="skill-dot"></span>{{ skill }}</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section id="technologies" class="resume-section" aria-labelledby="tech-title">
+    <h2 id="tech-title">Технології</h2>
+    <div class="d-flex flex-wrap gap-2">
+        {% for tech in technologies %}
+            <span class="badge tech-badge">{{ tech }}</span>
+        {% endfor %}
+    </div>
+</section>
+
+<section id="projects" class="resume-section" aria-labelledby="projects-title">
+    <h2 id="projects-title">Досвід роботи / Проекти</h2>
+    <div class="row g-4">
+        {% for p in projects %}
+            <div class="col-md-6 col-lg-4">
+                <article class="card project-card h-100">
+                    <div class="card-body">
+                        <h3 class="h5 card-title">{{ p.title }}</h3>
+                        <p class="text-muted small mb-2">{{ p.period }}</p>
+                        <p class="card-text">{{ p.description }}</p>
+                    </div>
+                    <div class="card-footer bg-transparent border-0 pb-3">
+                        {% for s in p.stack %}
+                            <span class="badge tech-badge">{{ s }}</span>
+                        {% endfor %}
+                    </div>
+                </article>
+            </div>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
