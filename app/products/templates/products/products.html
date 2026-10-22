@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Товари{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">Список товарів</h1>
+
+<div class="row g-4">
+    {% for product in products %}
+        <div class="col-md-6 col-lg-4">
+            <article class="card product-card h-100">
+                <div class="card-body">
+                    <h2 class="h5 card-title">{{ product.name }}</h2>
+                    <p class="card-text">{{ product.content }}</p>
+                </div>
+                <div class="card-footer bg-transparent border-0 pb-3 d-flex justify-content-between align-items-center">
+                    <span class="product-price">{{ product.price }} $</span>
+                    <a href="{{ url_for('products.product_detail', product_id=product.id) }}"
+                       class="btn btn-accent btn-sm">Детальніше</a>
+                </div>
+            </article>
+        </div>
+    {% else %}
+        <p class="text-muted">Товарів поки немає.</p>
+    {% endfor %}
+</div>
+{% endblock %}

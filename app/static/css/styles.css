@@ -77,3 +77,37 @@ main { flex: 1; }
     .profile-photo { width: 160px; height: 160px; }
     .hero { text-align: center; }
 }
+
+/* ---------- Блюпринт users: сторінка hi.html ---------- */
+.side-nav {
+    background: #fff;
+    border: 1px solid #dde5ea;
+    border-radius: .5rem;
+    padding: 1rem;
+}
+.side-nav-title {
+    display: block;
+    font-weight: 600;
+    color: var(--nav-bg);
+    margin-bottom: .6rem;
+    padding-bottom: .5rem;
+    border-bottom: 2px solid var(--accent);
+}
+.side-nav a {
+    display: block;
+    padding: .45rem .6rem;
+    border-radius: .35rem;
+    color: var(--ink);
+    text-decoration: none;
+}
+.side-nav a:hover { background: var(--soft); }
+.side-nav a.active { background: var(--accent); color: #fff; }
+
+.hello-title { font-size: 3.2rem; font-weight: 300; }
+.user-name { font-size: 1.8rem; font-weight: 600; }
+.age { font-size: 1.4rem; font-weight: 600; }
+.age-ok { color: #198754; }
+.age-missing { color: #dc3545; }
+
+/* ---------- Блюпринт products ---------- */
+.product-price { font-weight: 700; color: var(--accent-dark); }

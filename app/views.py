@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, flash, redirect, url_for
+from flask import render_template, request, flash, redirect, url_for
 
-app = Flask(__name__)
-app.secret_key = "lab2-dev-secret-key"
+from . import app
 
 PROFILE = {
     "name": "Руслан Залєвський",
@@ -68,13 +67,31 @@ CONTACTS = {
 }
 
 
+
+@app.context_processor
+def inject_profile():
+    """Робить profile доступним у всіх шаблонах (base, navbar, footer),
+    зокрема й у шаблонах блюпринтів."""
+    return {"profile": PROFILE}
+
+
 @app.route("/")
+def main():
+    return render_template("index.html", title="Головна")
+
+
+@app.route("/homepage")
+def home():
+    """View for the Home page of your website."""
+    agent = request.user_agent
+    return render_template("homepage.html", title="Homepage", agent=agent)
+
+
 @app.route("/resume")
 def resume():
     return render_template(
         "resume.html",
         title="Резюме",  # динамічний заголовок сторінки
-        profile=PROFILE,
         education=EDUCATION,
         skills=SKILLS,
         technologies=TECHNOLOGIES,
@@ -89,8 +106,4 @@ def contacts():
         name = request.form.get("name", "").strip()
         flash(f"Дякуємо, {name}! Повідомлення отримано (демо-режим, без відправки).", "success")
         return redirect(url_for("contacts"))
-    return render_template("contacts.html", title="Контакти", contacts=CONTACTS, profile=PROFILE)
-
-
-if __name__ == "__main__":
-    app.run(debug=True)
+    return render_template("contacts.html", title="Контакти", contacts=CONTACTS)

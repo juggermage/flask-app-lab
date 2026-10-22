@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1 class="mb-3">Homepage</h1>
+<p class="lead">Ласкаво просимо, {{ profile.name }}!</p>
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5 card-title">Інформація про ваш браузер</h2>
+        <p class="mb-1"><strong>User-Agent:</strong> {{ agent }}</p>
+        <p class="mb-1"><strong>Браузер:</strong> {{ agent.browser or 'невідомо' }}</p>
+        <p class="mb-0"><strong>Платформа:</strong> {{ agent.platform or 'невідомо' }}</p>
+    </div>
+</div>
+{% endblock %}

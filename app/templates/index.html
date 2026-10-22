@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="text-center py-4">
+    <h1 class="display-5 fw-bold">Flask Application</h1>
+    <p class="lead text-muted">Лабораторна робота №3 — модульна структура та Blueprints</p>
+    <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
+        <a href="{{ url_for('resume') }}" class="btn btn-accent">Резюме</a>
+        <a href="{{ url_for('contacts') }}" class="btn btn-outline-secondary">Контакти</a>
+        <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">Homepage</a>
+        <a href="{{ url_for('users.greetings', name='John', age=30) }}" class="btn btn-outline-secondary">Користувачі</a>
+        <a href="{{ url_for('products.product_list') }}" class="btn btn-outline-secondary">Товари</a>
+    </div>
+</section>
+{% endblock %}

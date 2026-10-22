@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Greeting Page{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Вертикальна навігація (тільки для цієї сторінки) -->
+    <aside class="col-md-3">
+        <nav class="side-nav" aria-label="Меню користувачів">
+            <span class="side-nav-title">FlaskApp</span>
+            <ul class="list-unstyled mb-0">
+                <li>
+                    <a href="{{ url_for('users.greetings', name='John', age=30) }}"
+                       class="{% if name == 'JOHN' %}active{% endif %}">Greet John</a>
+                </li>
+                <li>
+                    <a href="{{ url_for('users.admin') }}">Admin</a>
+                </li>
+                <li>
+                    <a href="{{ url_for('main') }}">На головну</a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Основний вміст -->
+    <section class="col-md-9">
+        <h1 class="hello-title">Hello :)</h1>
+        <h2 class="user-name">User: {{ name }}</h2>
+        {% if age is not none %}
+            <p class="age age-ok">Age: {{ age }}</p>
+        {% else %}
+            <p class="age age-missing">Age: Not provided</p>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
