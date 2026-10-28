@@ -2,7 +2,6 @@
     <nav class="navbar navbar-expand-lg navbar-dark site-navbar sticky-top" aria-label="Головна навігація">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main') }}">
-                <span>{{ profile.name }}</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#mainNav" aria-controls="mainNav"
@@ -46,6 +45,22 @@
                         <a class="nav-link {% if request.blueprint == 'products' %}active{% endif %}"
                            href="{{ url_for('products.product_list') }}">Товари</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.endpoint == 'users.profile' %}active{% endif %}"
+                           href="{{ url_for('users.profile') }}">Профіль</a>
+                    </li>
+                    {% if session.get('user') %}
+                        <li class="nav-item">
+                            <form method="post" action="{{ url_for('users.logout') }}" class="d-inline">
+                                <button type="submit" class="nav-link btn btn-link">Вийти ({{ session['user'] }})</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'users.login' %}active{% endif %}"
+                               href="{{ url_for('users.login') }}">Вхід</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

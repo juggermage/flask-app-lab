@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Профіль{% endblock %}
+
+{# Умовні стилі залежно від збереженої схеми (значення береться з кукі "theme") #}
+{% block extra_head %}
+{% if theme == 'dark' %}
+<style>
+    :root { --bg: #14181d; --ink: #e6edf3; --soft: #22303a; }
+    .welcome-banner { background: #0b3d91; }
+    .cookie-table th, .cookie-table td { border-color: #2f3b46; }
+</style>
+{% else %}
+<style>
+    :root { --bg: #f6f8fb; --ink: #1f2933; --soft: #e0f2f1; }
+    .welcome-banner { background: #0d6efd; }
+</style>
+{% endif %}
+<style>
+    .welcome-banner { color: #fff; padding: .6rem 1rem; border-radius: .4rem; }
+    .cookie-value { word-break: break-all; font-family: monospace; font-size: .85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+{# data-bs-theme перемикає компоненти Bootstrap (форми, таблиці, кнопки) на темний режим #}
+<div data-bs-theme="{{ theme }}">
+
+    <h1 class="welcome-banner display-6 mb-3">
+        Ласкаво просимо до сторінки <span aria-hidden="true"></span> {{ username }}!
+    </h1>
+
+
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <form method="post" action="{{ url_for('users.logout') }}">
+            <button type="submit" class="btn btn-danger btn-sm">Вийти</button>
+        </form>
+
+        {# Завдання 3: кнопки зміни кольорової схеми #}
+        <a href="{{ url_for('users.set_theme', scheme='light') }}"
+           class="btn btn-sm btn-outline-secondary {% if theme == 'light' %}active{% endif %}">☀ Світла схема</a>
+        <a href="{{ url_for('users.set_theme', scheme='dark') }}"
+           class="btn btn-sm btn-outline-secondary {% if theme == 'dark' %}active{% endif %}">🌙 Темна схема</a>
+    </div>
+
+    {# ---------- Додати кукі ---------- #}
+    <h2 class="h4">Додати кукі:</h2>
+    <form method="post" action="{{ url_for('users.add_cookie') }}" class="mb-4">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="c-key" class="form-label small">Ключ кукі:</label>
+                <input type="text" class="form-control" id="c-key" name="key" required>
+            </div>
+            <div class="col-md-4">
+                <label for="c-value" class="form-label small">Значення кукі:</label>
+                <input type="text" class="form-control" id="c-value" name="value">
+            </div>
+            <div class="col-md-4">
+                <label for="c-age" class="form-label small">Термін дії (сек):</label>
+                <input type="number" min="1" class="form-control" id="c-age" name="max_age">
+            </div>
+        </div>
+        <button type="submit" class="btn btn-success btn-sm mt-3">Додати кукі</button>
+    </form>
+
+    {# ---------- Видалити за ключем ---------- #}
+    <h2 class="h4">Видалити кукі за ключем:</h2>
+    <form method="post" action="{{ url_for('users.delete_cookie') }}" class="mb-4">
+        <label for="d-key" class="form-label small">Ключ кукі для видалення:</label>
+        <input type="text" class="form-control" id="d-key" name="key" required>
+        <button type="submit" class="btn btn-warning btn-sm mt-3">Видалити кукі за ключем</button>
+    </form>
+
+    {# ---------- Видалити всі ---------- #}
+    <h2 class="h4">Видалити всі кукі:</h2>
+    <form method="post" action="{{ url_for('users.delete_all_cookies') }}" class="mb-4">
+        <button type="submit" class="btn btn-danger btn-sm">Видалити всі кукі</button>
+    </form>
+
+    {# ---------- Таблиця поточних кукі ---------- #}
+    <h2 class="h4">Список всіх кукі:</h2>
+    <div class="table-responsive">
+        <table class="table table-striped cookie-table">
+            <thead>
+                <tr><th style="width: 30%">Ключ</th><th>Значення</th></tr>
+            </thead>
+            <tbody>
+                {% for key, value in cookies %}
+                <tr>
+                    <td>{{ key }}</td>
+                    <td class="cookie-value">{{ value }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="2" class="text-muted">Кукі відсутні.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

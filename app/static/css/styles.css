@@ -111,3 +111,11 @@ main { flex: 1; }
 
 /* ---------- Блюпринт products ---------- */
 .product-price { font-weight: 700; color: var(--accent-dark); }
+
+/* ---------- Кнопка «Вийти» у навігації ---------- */
+.site-navbar form .nav-link.btn {
+    text-decoration: none;
+    border: 0;
+    color: rgba(255, 255, 255, .55);
+}
+.site-navbar form .nav-link.btn:hover { color: rgba(255, 255, 255, .8); }
