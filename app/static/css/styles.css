@@ -121,8 +121,8 @@ main { flex: 1; }
 .site-navbar form .nav-link.btn:hover { color: rgba(255, 255, 255, .8); }
 
 /* ---------- Блюпринт products: зображення ---------- */
-.product-thumb { height: 180px; width: 100%; object-fit: cover; }
-.product-detail-image { width: 100%; height: 100%; min-height: 240px; max-height: 420px; object-fit: cover; }
+.product-thumb { height: 180px; width: 100%; object-fit: contain; background: #fff; }
+.product-detail-image { width: 100%; height: 420px; object-fit: contain; background: #fff; }
 .product-thumb-small { height: 90px; width: auto; max-width: 100%; object-fit: cover; border-radius: .35rem; }
 .product-image-placeholder {
     display: flex;
