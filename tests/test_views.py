@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+import logging
 
 from app import app
 
@@ -15,6 +16,10 @@ class MainViewsTestCase(unittest.TestCase):
         self.client = app.test_client()
 
     def tearDown(self):
+        contact_logger = logging.getLogger("contact_form")
+        for handler in list(contact_logger.handlers):
+            contact_logger.removeHandler(handler)
+            handler.close()
         app.config.update(self._saved)
         self.tmp.cleanup()
 
