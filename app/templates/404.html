@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block title %}Сторінку не знайдено{% endblock %}
+
+{% block content %}
+<section class="text-center py-5">
+    <h1 class="display-4 fw-bold">404</h1>
+    <p class="lead">Сторінку або ресурс не знайдено.</p>
+    <a href="{{ url_for('main') }}" class="btn btn-accent">На головну</a>
+    <a href="{{ url_for('products.product_list') }}" class="btn btn-outline-secondary">До товарів</a>
+</section>
+{% endblock %}

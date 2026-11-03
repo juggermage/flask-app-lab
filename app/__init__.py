@@ -10,3 +10,7 @@ from .products import product_bp  # noqa: E402
 
 app.register_blueprint(user_bp)
 app.register_blueprint(product_bp)
+
+from .products.storage import init_storage  # noqa: E402
+
+init_storage(app)  # створює data/products.json і таблицю товарів
