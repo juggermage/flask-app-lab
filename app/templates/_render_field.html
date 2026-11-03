@@ -1,0 +1,22 @@
+{#
+  Макрос виводу одного поля форми: label + поле + блок помилок.
+  Використання:
+    {% from '_render_field.html' import render_field %}
+    {{ render_field(form.name, placeholder="...") }}
+#}
+{% macro render_field(field) %}
+{% set base_class = "form-select" if field.type == "SelectField" else "form-control" %}
+<div class="mb-3">
+    {{ field.label(class="form-label") }}
+    {% if field.errors %}
+        {{ field(class=base_class ~ " is-invalid", **kwargs) | safe }}
+        <ul class="list-group mt-2">
+            {% for error in field.errors %}
+                <li class="list-group-item list-group-item-danger py-1">{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        {{ field(class=base_class, **kwargs) | safe }}
+    {% endif %}
+</div>
+{% endmacro %}
