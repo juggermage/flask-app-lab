@@ -3,24 +3,25 @@ import tempfile
 import unittest
 import logging
 
-from app import app
+from app import create_app
 
 
 class MainViewsTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.app = create_app("testing")
         self.tmp = tempfile.TemporaryDirectory()
         self.log_path = os.path.join(self.tmp.name, "contact.log")
-        self._saved = {k: app.config.get(k) for k in ("CONTACT_LOG_PATH", "WTF_CSRF_ENABLED")}
-        app.config.update(TESTING=True, WTF_CSRF_ENABLED=False, CONTACT_LOG_PATH=self.log_path)
-        self.client = app.test_client()
+        self._saved = {k: self.app.config.get(k) for k in ("CONTACT_LOG_PATH", "WTF_CSRF_ENABLED")}
+        self.app.config.update(TESTING=True, WTF_CSRF_ENABLED=False, CONTACT_LOG_PATH=self.log_path)
+        self.client = self.app.test_client()
 
     def tearDown(self):
         contact_logger = logging.getLogger("contact_form")
         for handler in list(contact_logger.handlers):
             contact_logger.removeHandler(handler)
             handler.close()
-        app.config.update(self._saved)
+        self.app.config.update(self._saved)
         self.tmp.cleanup()
 
     @staticmethod
@@ -51,7 +52,7 @@ class MainViewsTestCase(unittest.TestCase):
         self.assertIn("Освіта".encode("utf-8"), response.data)
 
     def test_contacts_get(self):
-        app.config["WTF_CSRF_ENABLED"] = True
+        self.app.config["WTF_CSRF_ENABLED"] = True
         response = self.client.get("/contacts")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'name="csrf_token"', response.data)
@@ -102,13 +103,13 @@ class MainViewsTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_contacts_csrf_protection(self):
-        app.config["WTF_CSRF_ENABLED"] = True
+        self.app.config["WTF_CSRF_ENABLED"] = True
         response = self.client.post("/contacts", data=self.valid_data())
         self.assertEqual(response.status_code, 200)  # форма не пройшла валідацію
         self.assertFalse(os.path.exists(self.log_path))
 
     def test_contacts_log_failure_flashes_error(self):
-        app.config["CONTACT_LOG_PATH"] = self.tmp.name  # це папка, а не файл -> OSError
+        self.app.config["CONTACT_LOG_PATH"] = self.tmp.name  # це папка, а не файл -> OSError
         response = self.client.post("/contacts", data=self.valid_data(), follow_redirects=True)
         self.assertIn("Не вдалося записати".encode("utf-8"), response.data)
         self.assertIn(b"alert-danger", response.data)

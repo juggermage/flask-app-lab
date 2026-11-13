@@ -1,7 +1,7 @@
 {#
   Макрос виводу одного поля форми: label + поле + блок помилок.
   Використання:
-    {% from '_render_field.html' import render_field %}
+    {% from 'macros/form_macros.html' import render_field %}
     {{ render_field(form.name, placeholder="...") }}
 #}
 {% macro render_field(field) %}

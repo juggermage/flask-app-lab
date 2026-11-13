@@ -4,7 +4,7 @@ import os
 import tempfile
 import unittest
 
-from app import app
+from app import create_app
 from app.products import storage
 
 # мінімальний валідний PNG 1x1
@@ -18,21 +18,22 @@ PNG_BYTES = (
 class ProductCrudTestCase(unittest.TestCase):
 
     def setUp(self):
+        self.app = create_app("testing")
         self.tmp = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.tmp.name, "data", "products.json")
         self.upload_dir = os.path.join(self.tmp.name, "uploads")
         keys = ("PRODUCTS_DB_PATH", "UPLOAD_FOLDER", "WTF_CSRF_ENABLED")
-        self._saved = {k: app.config.get(k) for k in keys}
-        app.config.update(
+        self._saved = {k: self.app.config.get(k) for k in keys}
+        self.app.config.update(
             TESTING=True,
             WTF_CSRF_ENABLED=False,
             PRODUCTS_DB_PATH=self.db_path,
             UPLOAD_FOLDER=self.upload_dir,
         )
-        self.client = app.test_client()
+        self.client = self.app.test_client()
 
     def tearDown(self):
-        app.config.update(self._saved)
+        self.app.config.update(self._saved)
         self.tmp.cleanup()
 
     # ---------- допоміжні методи ----------
@@ -66,14 +67,14 @@ class ProductCrudTestCase(unittest.TestCase):
     # ---------- storage ----------
 
     def test_init_storage_creates_file_and_table(self):
-        storage.init_storage(app)
+        storage.init_storage(self.app)
         with open(self.db_path, encoding="utf-8") as f:
             self.assertEqual(json.load(f), {"products": {}})
 
     def test_ids_are_unique_and_increasing(self):
         self.add(name="First")
         self.add(name="Second")
-        with app.app_context():
+        with self.app.app_context():
             ids = [p["id"] for p in storage.all_products()]
         self.assertEqual(ids, [1, 2])
 
@@ -124,7 +125,7 @@ class ProductCrudTestCase(unittest.TestCase):
                 self.assertIn(b"alert-danger", response.data)
                 if text:
                     self.assertIn(text.encode(), response.data)
-        with app.app_context():
+        with self.app.app_context():
             self.assertEqual(storage.all_products(), [])
 
     def test_add_zero_quantity_is_allowed(self):
@@ -136,7 +137,7 @@ class ProductCrudTestCase(unittest.TestCase):
         files = self.uploads()
         self.assertEqual(len(files), 1)
         self.assertRegex(files[0], r"^[0-9a-f]{32}\.png$")  # UUID-ім'я, не оригінальне
-        with app.app_context():
+        with self.app.app_context():
             product = storage.get_product(1)
         self.assertEqual(product["image"], f"uploads/{files[0]}")
 
@@ -213,7 +214,7 @@ class ProductCrudTestCase(unittest.TestCase):
 
     def test_edit_updates_fields_keeps_id_and_created_at(self):
         self.add()
-        with app.app_context():
+        with self.app.app_context():
             before = storage.get_product(1)
         response = self.client.post(
             "/product/1/edit",
@@ -221,7 +222,7 @@ class ProductCrudTestCase(unittest.TestCase):
             content_type="multipart/form-data",
         )
         self.assertEqual(response.status_code, 302)
-        with app.app_context():
+        with self.app.app_context():
             after = storage.get_product(1)
         self.assertEqual(after["name"], "Laptop Pro")
         self.assertEqual(after["price"], 999.99)
@@ -238,7 +239,7 @@ class ProductCrudTestCase(unittest.TestCase):
             "/product/1/edit", data=self.product_data(name="Renamed"),
             content_type="multipart/form-data",
         )
-        with app.app_context():
+        with self.app.app_context():
             product = storage.get_product(1)
         self.assertEqual(product["image"], f"uploads/{old[0]}")
         self.assertEqual(self.uploads(), old)
@@ -261,7 +262,7 @@ class ProductCrudTestCase(unittest.TestCase):
             content_type="multipart/form-data",
         )
         self.assertEqual(response.status_code, 200)
-        with app.app_context():
+        with self.app.app_context():
             self.assertEqual(storage.get_product(1)["name"], "Laptop")
 
     def test_edit_not_found(self):
@@ -280,7 +281,7 @@ class ProductCrudTestCase(unittest.TestCase):
         response = self.client.post("/product/1/delete", follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         self.assertIn("видалено".encode(), response.data)
-        with app.app_context():
+        with self.app.app_context():
             self.assertIsNone(storage.get_product(1))
         self.assertEqual(self.uploads(), [])
         self.assertEqual(self.client.get("/product/1").status_code, 404)
@@ -290,10 +291,10 @@ class ProductCrudTestCase(unittest.TestCase):
 
     def test_delete_without_csrf_token_is_rejected(self):
         self.add()
-        app.config["WTF_CSRF_ENABLED"] = True
+        self.app.config["WTF_CSRF_ENABLED"] = True
         response = self.client.post("/product/1/delete", follow_redirects=True)
         self.assertIn("CSRF".encode(), response.data)
-        with app.app_context():
+        with self.app.app_context():
             self.assertIsNotNone(storage.get_product(1))
 
     def test_ids_after_deleting_middle_item(self):
@@ -301,7 +302,7 @@ class ProductCrudTestCase(unittest.TestCase):
             self.add(name=n)
         self.client.post("/product/2/delete")
         self.add(name="Four")
-        with app.app_context():
+        with self.app.app_context():
             ids = [p["id"] for p in storage.all_products()]
         self.assertEqual(ids, [1, 3, 4])
 
@@ -309,17 +310,17 @@ class ProductCrudTestCase(unittest.TestCase):
 
     def test_data_persists_between_requests_and_reopen(self):
         self.add()
-        with app.app_context():
+        with self.app.app_context():
             first = storage.all_products()
             second = storage.all_products()  # нове відкриття файлу
         self.assertEqual(first, second)
         self.assertEqual(len(first), 1)
 
     def test_add_csrf_protection(self):
-        app.config["WTF_CSRF_ENABLED"] = True
+        self.app.config["WTF_CSRF_ENABLED"] = True
         response = self.add()
         self.assertEqual(response.status_code, 200)
-        with app.app_context():
+        with self.app.app_context():
             self.assertEqual(storage.all_products(), [])
 
 

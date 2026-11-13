@@ -1,6 +1,5 @@
-from flask import render_template, request, flash, redirect, url_for
+from flask import current_app, flash, redirect, render_template, request, url_for
 
-from . import app
 from .forms import ContactForm
 from .logging_utils import log_contact
 
@@ -70,26 +69,22 @@ CONTACTS = {
 
 
 
-@app.context_processor
 def inject_profile():
     """Робить profile доступним у всіх шаблонах (base, navbar, footer),
     зокрема й у шаблонах блюпринтів."""
     return {"profile": PROFILE}
 
 
-@app.route("/")
 def main():
     return render_template("index.html", title="Головна")
 
 
-@app.route("/homepage")
 def home():
     """View for the Home page of your website."""
     agent = request.user_agent
     return render_template("homepage.html", title="Homepage", agent=agent)
 
 
-@app.route("/resume")
 def resume():
     return render_template(
         "resume.html",
@@ -101,7 +96,6 @@ def resume():
     )
 
 
-@app.route("/contacts", methods=["GET", "POST"])
 def contacts():
     form = ContactForm()
 
@@ -115,7 +109,7 @@ def contacts():
             "message": form.message.data,
         }
         try:
-            log_contact(app.config["CONTACT_LOG_PATH"], record)
+            log_contact(current_app.config["CONTACT_LOG_PATH"], record)
         except OSError:
             flash("Не вдалося записати ваші дані. Спробуйте пізніше.", "danger")
         else:
@@ -128,6 +122,10 @@ def contacts():
     return render_template("contacts.html", title="Контакти", contacts=CONTACTS, form=form)
 
 
-@app.errorhandler(404)
-def page_not_found(error):
-    return render_template("404.html", title="Не знайдено"), 404
+def register_views(app):
+    """Реєструє головні сторінки з тими самими іменами ендпоінтів (main, resume, contacts, home)."""
+    app.context_processor(inject_profile)
+    app.add_url_rule("/", "main", main)
+    app.add_url_rule("/homepage", "home", home)
+    app.add_url_rule("/resume", "resume", resume)
+    app.add_url_rule("/contacts", "contacts", contacts, methods=["GET", "POST"])

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block title %}Пости{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" href="{{ url_for('posts.static', filename='css/posts.css') }}">
+{% endblock %}
+
+{% block content %}
+<h1 class="posts-title">Статті</h1>
+
+<div class="mb-4">
+    <a href="{{ url_for('posts.add_post') }}" class="btn btn-accent">+ Додати пост</a>
+</div>
+
+<div class="row g-4">
+    {% for post in posts %}
+        <div class="col-md-6 col-lg-4">
+            <article class="card post-card h-100">
+                <img src="{{ url_for('posts.static', filename='img/default.jpg') }}"
+                     class="card-img-top post-card-img" alt="{{ post.title }}">
+                <div class="card-body">
+                    <h2 class="h5 card-title">{{ post.title }}</h2>
+                    <p class="mb-1"><span class="badge tech-badge">{{ post.category|post_category }}</span></p>
+                    <p class="small text-muted mb-2">
+                        {{ post.posted.strftime('%d.%m.%Y %H:%M') }} &middot; {{ post.author }}
+                    </p>
+                    <p class="card-text">{{ post.content[:100] }}{% if post.content|length > 100 %}…{% endif %}</p>
+                </div>
+                <div class="card-footer bg-transparent border-0 pb-3">
+                    <a href="{{ url_for('posts.detail_post', id=post.id) }}"
+                       class="btn btn-outline-primary btn-sm">Переглянути</a>
+                </div>
+            </article>
+        </div>
+    {% else %}
+        <p class="text-muted">Постів поки немає.</p>
+    {% endfor %}
+</div>
+{% endblock %}

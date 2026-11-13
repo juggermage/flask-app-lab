@@ -1,13 +1,14 @@
 import unittest
 
-from app import app
+from app import create_app
 
 
 class AuthTestCase(unittest.TestCase):
 
     def setUp(self):
-        app.config["TESTING"] = True
-        self.client = app.test_client()
+        self.app = create_app("testing")
+        self.app.config["TESTING"] = True
+        self.client = self.app.test_client()
 
     def login(self, username="user1", password="12345"):
         return self.client.post(
