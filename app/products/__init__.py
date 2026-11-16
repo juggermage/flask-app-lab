@@ -8,4 +8,4 @@ product_bp = Blueprint(
     static_folder="static",  # app/products/static/uploads/ -> /product/static/uploads/...
 )
 
-from . import views  # noqa: E402,F401
+from . import views, models  # noqa: E402,F401
