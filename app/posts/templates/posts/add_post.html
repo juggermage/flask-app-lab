@@ -29,6 +29,8 @@
             </div>
             {{ render_field(form.publish_date) }}
             {{ render_field(form.category) }}
+            {{ render_field(form.author_id) }}
+            {{ render_field(form.tags, size=4) }}
 
             {{ form.submit(class="btn btn-accent") }}
             <a href="{{ url_for('posts.detail_post', id=post.id) if post else url_for('posts.all_posts') }}"

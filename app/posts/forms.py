@@ -3,9 +3,21 @@
 from datetime import datetime
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, SelectField, StringField, SubmitField, TextAreaField
+from wtforms import (
+    BooleanField,
+    SelectField,
+    SelectMultipleField,
+    StringField,
+    SubmitField,
+    TextAreaField,
+)
 from wtforms.fields import DateTimeLocalField
 from wtforms.validators import DataRequired, Length
+
+from app import db
+from app.users.models import User
+
+from .models import Tag
 
 CATEGORIES = [
     ("news", "Новина"),
@@ -47,7 +59,21 @@ class PostForm(FlaskForm):
         choices=CATEGORIES,
         validators=[DataRequired(message="Оберіть категорію.")],
     )
+    # варіанти вибору заповнюються з БД у __init__ (синтаксис SQLAlchemy 2.0)
+    author_id = SelectField(
+        "Автор",
+        coerce=int,
+        validators=[DataRequired(message="Оберіть автора.")],
+    )
+    tags = SelectMultipleField("Теги", coerce=int)
     submit = SubmitField("Зберегти")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        users = db.session.scalars(db.select(User).order_by(User.id)).all()
+        self.author_id.choices = [(u.id, u.username) for u in users]
+        all_tags = db.session.scalars(db.select(Tag).order_by(Tag.name)).all()
+        self.tags.choices = [(t.id, t.name) for t in all_tags]
 
 
 class DeleteForm(FlaskForm):

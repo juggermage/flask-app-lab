@@ -7,4 +7,4 @@ user_bp = Blueprint(
     template_folder="templates/users",
 )
 
-from . import views  # noqa: E402,F401
+from . import models, views  # noqa: E402,F401  (models — щоб Alembic бачив таблицю users)

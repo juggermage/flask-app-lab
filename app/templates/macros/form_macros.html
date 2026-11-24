@@ -5,7 +5,7 @@
     {{ render_field(form.name, placeholder="...") }}
 #}
 {% macro render_field(field) %}
-{% set base_class = "form-select" if field.type == "SelectField" else "form-control" %}
+{% set base_class = "form-select" if field.type in ("SelectField", "SelectMultipleField") else "form-control" %}
 <div class="mb-3">
     {{ field.label(class="form-label") }}
     {% if field.errors %}

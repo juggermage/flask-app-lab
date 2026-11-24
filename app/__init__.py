@@ -48,6 +48,10 @@ def create_app(config_name=None):
 
     init_storage(app)
 
+    from .seed import register_commands
+
+    register_commands(app)
+
     @app.errorhandler(404)
     def page_not_found(error):
         return render_template("404.html", title="Не знайдено"), 404

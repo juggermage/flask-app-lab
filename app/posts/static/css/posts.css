@@ -23,3 +23,15 @@
 }
 
 .post-content { white-space: pre-line; }
+
+/* Теги поста (лаб. 8, п. 12): "Tag / Tag / " */
+.post-tags { color: #6c757d; }
+.post-tag {
+    color: #f59e0b;
+    font-weight: 600;
+}
+.post-tag::after {
+    content: " / ";
+    color: #6c757d;
+    font-weight: 400;
+}

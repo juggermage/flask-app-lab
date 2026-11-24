@@ -2,16 +2,19 @@ import unittest
 from datetime import datetime, timedelta
 
 from app import create_app, db
-from app.posts.models import Post
+from app.posts.models import Post, Tag
+from app.users.models import User
 
 
-class PostTestCase(unittest.TestCase):
+class BaseCase(unittest.TestCase):
 
     def setUp(self):
         self.app = create_app("testing")
         self.client = self.app.test_client()
         with self.app.app_context():
             db.create_all()
+        self.user_id = self.make_user("user1")
+        self.user2_id = self.make_user("user2")
 
     def tearDown(self):
         with self.app.app_context():
@@ -20,14 +23,29 @@ class PostTestCase(unittest.TestCase):
 
     # ---------- допоміжні методи ----------
 
-    @staticmethod
-    def form_data(**overrides):
+    def make_user(self, username):
+        with self.app.app_context():
+            user = User(username=username, email=f"{username}@ex.com")
+            user.set_password("12345")
+            db.session.add(user)
+            db.session.commit()
+            return user.id
+
+    def make_tag(self, name):
+        with self.app.app_context():
+            tag = Tag(name=name)
+            db.session.add(tag)
+            db.session.commit()
+            return tag.id
+
+    def form_data(self, **overrides):
         data = {
             "title": "My first post",
             "content": "This is TDD!",
             "is_active": "y",
             "publish_date": "2024-11-21T20:45",
             "category": "tech",
+            "author_id": str(self.user_id),
         }
         data.update(overrides)
         return data
@@ -50,6 +68,9 @@ class PostTestCase(unittest.TestCase):
         with self.app.app_context():
             return db.session.get(Post, post_id)
 
+
+class PostTestCase(BaseCase):
+
     # ---------- модель ----------
 
     def test_model_defaults_and_repr(self):
@@ -58,7 +79,8 @@ class PostTestCase(unittest.TestCase):
             db.session.add(post)
             db.session.commit()
             self.assertTrue(post.is_active)
-            self.assertEqual(post.author, "Anonymous")
+            self.assertIsNone(post.user)
+            self.assertEqual(post.tags, [])
             self.assertEqual(post.category, "other")
             self.assertIsNotNone(post.posted)
             self.assertIn("Test", repr(post))
@@ -76,13 +98,16 @@ class PostTestCase(unittest.TestCase):
             self.assertEqual(post.content, "This is TDD!")
             self.assertEqual(post.category, "tech")
             self.assertEqual(post.posted, datetime(2024, 11, 21, 20, 45))
-            self.assertEqual(post.author, "Anonymous")
+            self.assertEqual(post.user_id, self.user_id)
+            self.assertEqual(post.user.username, "user1")
 
     def test_create_form_page(self):
         response = self.client.get("/post/create")
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'name="title"', response.data)
-        self.assertNotIn(b'name="author"', response.data)  # автора форма не містить
+        self.assertIn(b'name="author_id"', response.data)
+        self.assertIn(b"user2", response.data)  # список авторів береться з БД
+        self.assertIn(b'name="tags"', response.data)
 
     def test_create_post_redirects_to_list(self):
         response = self.client.post("/post/create", data=self.form_data())
@@ -108,13 +133,30 @@ class PostTestCase(unittest.TestCase):
         with self.app.app_context():
             self.assertEqual(db.session.scalars(db.select(Post)).all(), [])
 
-    def test_author_is_session_user(self):
-        with self.client.session_transaction() as sess:
-            sess["user"] = "admin"
-        self.client.post("/post/create", data=self.form_data())
+    def test_create_post_invalid_author(self):
+        response = self.client.post("/post/create", data=self.form_data(author_id="999"))
+        self.assertEqual(response.status_code, 200)
+        with self.app.app_context():
+            self.assertEqual(db.session.scalars(db.select(Post)).all(), [])
+
+    def test_create_post_with_tags(self):
+        t1, t2 = self.make_tag("Tech"), self.make_tag("Art")
+        self.client.post("/post/create", data=self.form_data(tags=[str(t1), str(t2)]))
         with self.app.app_context():
             post = db.session.scalar(db.select(Post))
-            self.assertEqual(post.author, "admin")
+            self.assertEqual(sorted(t.name for t in post.tags), ["Art", "Tech"])
+
+    def test_create_post_invalid_tag(self):
+        response = self.client.post("/post/create", data=self.form_data(tags=["999"]))
+        self.assertEqual(response.status_code, 200)
+        with self.app.app_context():
+            self.assertEqual(db.session.scalars(db.select(Post)).all(), [])
+
+    def test_session_user_preselected_as_author(self):
+        with self.client.session_transaction() as sess:
+            sess["user"] = "user2"
+        body = self.client.get("/post/create").data.decode()
+        self.assertRegex(body, rf'<option selected value="{self.user2_id}">user2</option>')
 
     # ---------- US02: список ----------
 
@@ -148,13 +190,23 @@ class PostTestCase(unittest.TestCase):
     # ---------- US03: деталі ----------
 
     def test_view_post_detail(self):
-        post_id = self.make_post(title="Detail title", content="Full content", author="ruslan")
+        post_id = self.make_post(title="Detail title", content="Full content", user_id=self.user_id)
         response = self.client.get(f"/post/{post_id}")
         self.assertEqual(response.status_code, 200)
-        for text in ("Detail title", "Full content", "ruslan"):
+        for text in ("Detail title", "Full content", "user1"):
             self.assertIn(text.encode(), response.data)
         self.assertIn(f"/post/{post_id}/update".encode(), response.data)
         self.assertIn(f"/post/{post_id}/delete".encode(), response.data)
+
+    def test_detail_shows_tags(self):
+        post_id = self.make_post(title="Tagged")
+        tag_id = self.make_tag("Science")
+        with self.app.app_context():
+            post = db.session.get(Post, post_id)
+            post.tags.append(db.session.get(Tag, tag_id))
+            db.session.commit()
+        response = self.client.get(f"/post/{post_id}")
+        self.assertIn(b'class="post-tag">Science</span>', response.data)
 
     # ---------- US04: редагування ----------
 
@@ -166,11 +218,13 @@ class PostTestCase(unittest.TestCase):
         self.assertIn(b"2024-11-21T20:45", response.data)
 
     def test_update_post(self):
-        post_id = self.make_post(title="Before", author="ruslan")
+        post_id = self.make_post(title="Before", user_id=self.user_id)
+        tag_id = self.make_tag("Art")
         response = self.client.post(
             f"/post/{post_id}/update",
             data=self.form_data(title="After", content="Changed", category="publication",
-                                publish_date="2025-02-03T04:05"),
+                                publish_date="2025-02-03T04:05",
+                                author_id=str(self.user2_id), tags=[str(tag_id)]),
             follow_redirects=True,
         )
         self.assertEqual(response.status_code, 200)
@@ -181,7 +235,20 @@ class PostTestCase(unittest.TestCase):
         self.assertEqual(post.content, "Changed")
         self.assertEqual(post.category, "publication")
         self.assertEqual(post.posted, datetime(2025, 2, 3, 4, 5))  # дату змінено, а не перезаписано
-        self.assertEqual(post.author, "ruslan")  # автор не змінюється
+        self.assertEqual(post.user_id, self.user2_id)  # автора можна змінити
+        with self.app.app_context():
+            self.assertEqual([t.name for t in db.session.get(Post, post_id).tags], ["Art"])
+
+    def test_update_form_preselects_author_and_tags(self):
+        tag_id = self.make_tag("Art")
+        post_id = self.make_post(user_id=self.user2_id)
+        with self.app.app_context():
+            post = db.session.get(Post, post_id)
+            post.tags.append(db.session.get(Tag, tag_id))
+            db.session.commit()
+        body = self.client.get(f"/post/{post_id}/update").data.decode()
+        self.assertIn(f'<option selected value="{self.user2_id}">user2</option>', body)
+        self.assertIn(f'<option selected value="{tag_id}">Art</option>', body)
 
     def test_update_can_deactivate_post(self):
         post_id = self.make_post()
@@ -234,6 +301,45 @@ class PostTestCase(unittest.TestCase):
         self.assertEqual(self.client.post("/post/999/update", data=self.form_data()).status_code, 404)
         self.assertEqual(self.client.get("/post/999/delete").status_code, 404)
         self.assertEqual(self.client.post("/post/999/delete").status_code, 404)
+
+
+class RelationshipsTestCase(BaseCase):
+    """Лаб. 8: зв'язки User—Post (1:N) та Post—Tag (M:N)."""
+
+    def test_user_posts_back_populates(self):
+        self.make_post(title="A", user_id=self.user_id)
+        self.make_post(title="B", user_id=self.user_id)
+        self.make_post(title="C", user_id=self.user2_id)
+        with self.app.app_context():
+            u1 = db.session.get(User, self.user_id)
+            self.assertEqual(sorted(p.title for p in u1.posts), ["A", "B"])
+            self.assertEqual(u1.posts[0].user, u1)
+
+    def test_deleting_user_deletes_posts(self):
+        self.make_post(title="A", user_id=self.user_id)
+        with self.app.app_context():
+            db.session.delete(db.session.get(User, self.user_id))
+            db.session.commit()
+            self.assertEqual(db.session.scalars(db.select(Post)).all(), [])
+
+    def test_many_to_many_both_directions(self):
+        p1, p2 = self.make_post(title="P1"), self.make_post(title="P2")
+        t_id = self.make_tag("Tech")
+        with self.app.app_context():
+            tag = db.session.get(Tag, t_id)
+            tag.posts.append(db.session.get(Post, p1))
+            tag.posts.append(db.session.get(Post, p2))
+            db.session.commit()
+            self.assertEqual([t.name for t in db.session.get(Post, p1).tags], ["Tech"])
+            self.assertEqual(sorted(p.title for p in tag.posts), ["P1", "P2"])
+
+    def test_password_is_hashed(self):
+        with self.app.app_context():
+            user = db.session.get(User, self.user_id)
+            self.assertNotEqual(user.password, "12345")
+            self.assertTrue(user.check_password("12345"))
+            self.assertFalse(user.check_password("wrong"))
+            self.assertEqual(repr(user), "User('user1@ex.com')")
 
 
 class ConfigTestCase(unittest.TestCase):

@@ -22,6 +22,8 @@ class Config:
     # SQLAlchemy: відносний шлях sqlite:///data.sqlite -> instance/data.sqlite
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///data.sqlite")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Лаб. 8, п. 13: журнал SQL-запитів вмикається змінною середовища SQLALCHEMY_ECHO=1
+    SQLALCHEMY_ECHO = os.getenv("SQLALCHEMY_ECHO", "0") == "1"
 
     # Лабораторна 5: контактна форма
     CONTACT_LOG_PATH = os.path.join(BASE_DIR, "logs", "contact.log")

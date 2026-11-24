@@ -23,8 +23,9 @@
                     <h2 class="h5 card-title">{{ post.title }}</h2>
                     <p class="mb-1"><span class="badge tech-badge">{{ post.category|post_category }}</span></p>
                     <p class="small text-muted mb-2">
-                        {{ post.posted.strftime('%d.%m.%Y %H:%M') }} &middot; {{ post.author }}
+                        {{ post.posted.strftime('%d.%m.%Y %H:%M') }} &middot; {{ post.user.username if post.user else 'Anonymous' }}
                     </p>
+                    {% if post.tags %}<p class="post-tags small mb-2">{% for tag in post.tags %}<span class="post-tag">{{ tag.name }}</span>{% endfor %}</p>{% endif %}
                     <p class="card-text">{{ post.content[:100] }}{% if post.content|length > 100 %}…{% endif %}</p>
                 </div>
                 <div class="card-footer bg-transparent border-0 pb-3">
