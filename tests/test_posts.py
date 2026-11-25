@@ -153,8 +153,7 @@ class PostTestCase(BaseCase):
             self.assertEqual(db.session.scalars(db.select(Post)).all(), [])
 
     def test_session_user_preselected_as_author(self):
-        with self.client.session_transaction() as sess:
-            sess["user"] = "user2"
+        self.client.post("/users/login", data={"username": "user2", "password": "12345"})
         body = self.client.get("/post/create").data.decode()
         self.assertRegex(body, rf'<option selected value="{self.user2_id}">user2</option>')
 

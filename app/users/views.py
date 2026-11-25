@@ -1,5 +1,9 @@
 import re
-from functools import wraps
+from flask_login import login_user, logout_user, current_user, login_required
+from sqlalchemy.exc import IntegrityError
+from app import db
+from .models import User
+from .forms import RegistrationForm, LoginForm, LogoutForm
 
 from flask import (
     flash,
@@ -13,29 +17,14 @@ from flask import (
 
 from . import user_bp
 
-# Заглушка замість бази даних
-USERS = {
-    "user1": "12345",
-    "admin": "admin",
-}
-
 THEMES = ("light", "dark")
 THEME_COOKIE = "theme"
 COOKIE_KEY_RE = re.compile(r"^[A-Za-z0-9_.\-]{1,64}$")  # дозволені символи ключа кукі
 
 
-def login_required(view):
-    """Пускає далі лише якщо користувач є в сесії, інакше -> login + flash."""
-
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if "user" not in session:
-            flash("Спочатку увійдіть у систему, щоб переглянути профіль.", "danger")
-            return redirect(url_for("users.login"))
-        return view(*args, **kwargs)
-
-    return wrapped
-
+@user_bp.app_context_processor
+def logout_form_context():
+    return {"logout_form": LogoutForm()}
 
 
 # login / profile / logout
@@ -54,45 +43,78 @@ def admin():
     return redirect(to_url)
 
 
+@user_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if current_user.is_authenticated:
+        return redirect(url_for("users.account"))
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        user = User(username=form.username.data, email=form.email.data)
+        user.set_password(form.password.data)
+        db.session.add(user)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Користувач з таким іменем або email вже існує.", "danger")
+        else:
+            flash("Реєстрація успішна! Тепер увійдіть у систему.", "success")
+            return redirect(url_for("users.login"))
+    return render_template("register.html", form=form, title="Реєстрація")
+
+
 @user_bp.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
-
-        if username in USERS and USERS[username] == password:
-            session["user"] = username  # зберігаємо користувача в сесію
-            flash(f"Ви успішно увійшли як {username}!", "success")
-            return redirect(url_for("users.profile"))
-
+    if current_user.is_authenticated:
+        return redirect(url_for("users.account"))
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = db.session.scalar(db.select(User).where(User.username == form.username.data))
+        if user and user.check_password(form.password.data):
+            if not user.password.startswith(("$2a$", "$2b$", "$2y$")):
+                user.set_password(form.password.data)
+                db.session.commit()
+            login_user(user, remember=form.remember.data)
+            flash(f"Ви успішно увійшли як {user.username}!", "success")
+            return redirect(url_for("users.account"))
         flash("Wrong data! Try again!", "danger")
-        return redirect(url_for("users.login"))
+    return render_template("login.html", form=form, title="Вхід")
 
-    return render_template("login.html", title="Вхід")
+
+@user_bp.route("/account")
+@login_required
+def account():
+    theme = request.cookies.get(THEME_COOKIE, "light")
+    if theme not in THEMES:
+        theme = "light"
+    return render_template("account.html", title="Профіль", username=current_user.username,
+                           user=current_user, theme=theme,
+                           cookies=[(k, v) for k, v in request.cookies.items() if k not in ("session", "remember_token")])
 
 
 @user_bp.route("/profile")
 @login_required
 def profile():
-    theme = request.cookies.get(THEME_COOKIE, "light")
-    if theme not in THEMES:
-        theme = "light"
-    return render_template(
-        "profile.html",
-        title="Профіль",
-        username=session["user"],
-        theme=theme,
-        cookies=request.cookies.items(),  # (ключ, значення) усіх кукі запиту
-    )
+    return account()
+
+
+@user_bp.route("/list")
+@login_required
+def users_list():
+    users = db.session.scalars(db.select(User).order_by(User.id)).all()
+    return render_template("users_list.html", users=users, title="Користувачі")
 
 
 @user_bp.route("/logout", methods=["POST"])
 @login_required
 def logout():
+    if not LogoutForm().validate_on_submit():
+        from flask import abort
+        abort(400)
+    logout_user()
     session.pop("user", None)
     flash("Ви вийшли з системи.", "info")
     return redirect(url_for("users.login"))
-
 
 
 # Керування кукі
@@ -107,7 +129,7 @@ def add_cookie():
     if not COOKIE_KEY_RE.match(key):
         flash("Ключ кукі може містити лише латинські літери, цифри, '_', '-', '.' (до 64 символів).", "danger")
         return redirect(url_for("users.profile"))
-    if key == "session":
+    if key in ("session", "remember_token"):
         flash("Кукі 'session' службова — її змінювати не можна.", "danger")
         return redirect(url_for("users.profile"))
 
@@ -130,7 +152,7 @@ def add_cookie():
 def delete_cookie():
     key = request.form.get("key", "").strip()
 
-    if key == "session":
+    if key in ("session", "remember_token"):
         flash("Кукі 'session' видаляти не можна — вона зберігає ваш вхід. Скористайтесь кнопкою «Вийти».", "warning")
         return redirect(url_for("users.profile"))
     if key not in request.cookies:
@@ -149,7 +171,7 @@ def delete_all_cookies():
     response = make_response(redirect(url_for("users.profile")))
     deleted = 0
     for key in request.cookies:
-        if key == "session":  # лишаємо сесію, щоб користувача не "вибило"
+        if key in ("session", "remember_token"):  # лишаємо сесію, щоб користувача не "вибило"
             continue
         response.delete_cookie(key)
         deleted += 1

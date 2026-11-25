@@ -4,12 +4,21 @@ from __future__ import annotations
 
 import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.security import check_password_hash
 
-from app import db
+from app import db, bcrypt, login_manager
+from flask_login import UserMixin
 
 
-class User(db.Model):
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        return db.session.get(User, int(user_id))
+    except (ValueError, TypeError):
+        return None
+
+
+class User(db.Model, UserMixin):
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -24,9 +33,14 @@ class User(db.Model):
     )
 
     def set_password(self, raw_password: str) -> None:
-        self.password = generate_password_hash(raw_password)
+        self.password = bcrypt.generate_password_hash(raw_password).decode("utf-8")
 
     def check_password(self, raw_password: str) -> bool:
+        if len(raw_password.encode("utf-8")) > 72:
+            return False
+        if self.password.startswith(("$2a$", "$2b$", "$2y$")):
+            return bcrypt.check_password_hash(self.password, raw_password)
+        # Сумісність із хешами Werkzeug з лабораторної 8.
         return check_password_hash(self.password, raw_password)
 
     def __repr__(self):

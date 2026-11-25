@@ -49,7 +49,8 @@ def add_post():
     form = PostForm()
     if request.method == "GET":
         # якщо ім'я користувача із сесії є серед авторів у БД — обираємо його за замовчуванням
-        current = db.session.scalar(db.select(User).where(User.username == session.get("user")))
+        from flask_login import current_user
+        current = current_user if current_user.is_authenticated else None
         if current:
             form.author_id.data = current.id
     if not form.author_id.choices:

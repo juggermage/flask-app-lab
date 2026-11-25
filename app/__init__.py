@@ -2,6 +2,8 @@ import os
 
 from flask import Flask, render_template
 from flask_migrate import Migrate
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 
 from .config import config
@@ -10,6 +12,11 @@ from .models import Base
 # Розширення створюються без застосунку і прив'язуються до нього у create_app()
 db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
+bcrypt = Bcrypt()
+login_manager = LoginManager()
+login_manager.login_view = "users.login"
+login_manager.login_message = "Спочатку увійдіть у систему."
+login_manager.login_message_category = "warning"
 
 
 def create_app(config_name=None):
@@ -27,6 +34,8 @@ def create_app(config_name=None):
 
     # Розширення
     db.init_app(app)
+    bcrypt.init_app(app)
+    login_manager.init_app(app)
     migrate.init_app(app, db, render_as_batch=True)  # batch-режим потрібен SQLite для ALTER
 
     # Головні сторінки (/, /resume, /contacts, ...)

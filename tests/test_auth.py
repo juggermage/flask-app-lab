@@ -1,6 +1,7 @@
 import unittest
 
-from app import create_app
+from app import create_app, db
+from app.users.models import User
 
 
 class AuthTestCase(unittest.TestCase):
@@ -9,6 +10,17 @@ class AuthTestCase(unittest.TestCase):
         self.app = create_app("testing")
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
+        with self.app.app_context():
+            db.create_all()
+            user = User(username="user1", email="user1@example.com")
+            user.set_password("12345")
+            db.session.add(user)
+            db.session.commit()
+
+    def tearDown(self):
+        with self.app.app_context():
+            db.session.remove()
+            db.drop_all()
 
     def login(self, username="user1", password="12345"):
         return self.client.post(
@@ -25,7 +37,7 @@ class AuthTestCase(unittest.TestCase):
         self.assertEqual(r.status_code, 302)
         self.assertIn("/users/login", r.headers["Location"])
         r = self.client.get("/users/profile", follow_redirects=True)
-        self.assertIn("alert-danger".encode(), r.data)
+        self.assertIn(b"alert-warning", r.data)
 
     def test_wrong_login(self):
         r = self.login(password="bad")
